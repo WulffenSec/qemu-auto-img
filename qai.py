@@ -70,7 +70,11 @@ def qai(args):
             quit()
         process = str(process)
         process = process.split('\\n')
+        extra_disk = list()
         for p in process:
+            if re.findall('disk00[2-9]+',p):
+                extra_disk.append(p)
+                continue
             if re.findall('vmdk',p):
                 disk_format = ('vmdk')
                 file = p
@@ -100,8 +104,28 @@ def qai(args):
     
     output = output[0]
     output = output + 'qcow2'
-    
+
     subprocess.run(['qemu-img','convert','-O','qcow2',file,output])
+    print('Done!')
     
+    # Multi disk inside OVA converting
+    if len(extra_disk) >= 1:
+        print('\nMore than one disk detected, converting...\n')
+        for x in extra_disk:
+            print('Converting the disk img to qcow2')
+            if disk_format == 'vmdk':
+                output = x.split('vmdk')
+            elif disk_format == 'vdi':
+                output = x.split('vdi')
+            else:
+                print('Something went wrong')
+                quit()
+            
+            output = output[0]
+            output = output + 'qcow2'
+
+            subprocess.run(['qemu-img','convert','-O','qcow2',x,output])
+            print('Done!\n')
+
     print('Job done!')
 qai(args)
