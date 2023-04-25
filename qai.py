@@ -1,4 +1,59 @@
 #!/bin/env python3
+import colorama
+import argparse
+import sys
+import subprocess
+
+
+def banner() -> None:
+    """
+    Prints the banner
+    """
+    green = colorama.Fore.GREEN
+    reset = colorama.Fore.RESET
+    banner = f'''
+    {green} ██████  ███████ ███    ███ ██    ██{reset}        █████  ██    ██ ████████  ██████       {green} ██ ███    ███  ██████{reset}
+    {green}██    ██ ██      ████  ████ ██    ██{reset}       ██   ██ ██    ██    ██    ██    ██      {green} ██ ████  ████ ██{reset}
+    {green}██    ██ █████   ██ ████ ██ ██    ██{reset} █████ ███████ ██    ██    ██    ██    ██ █████{green} ██ ██ ████ ██ ██   ███{reset}
+    {green}██ ▄▄ ██ ██      ██  ██  ██ ██    ██{reset}       ██   ██ ██    ██    ██    ██    ██      {green} ██ ██  ██  ██ ██    ██{reset}
+    {green} ██████  ███████ ██      ██  ██████ {reset}       ██   ██  ██████     ██     ██████       {green} ██ ██      ██  ██████{reset}
+    {green}    ▀▀{reset} Github: WulffenSec | Version: 0.2
+    ''' # noqa
+    print(banner)
+
+
+def checkFile(file) -> bool:
+    """
+    Checks if the OVA file actually is a OVA file
+    """
+    cmd = subprocess.check_output(['file', file]).decode().split('\n')[0]
+    if cmd != file + ': POSIX tar archive':
+        print('No valid OVA File. Type of file readed:', cmd.split(': ')[1])
+        return False
+    else:
+        return True
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+            prog='qai.py', usage='qai.py -i ova-file.ova',
+            description='\t\tExtract and rename OVA files to qcow2 for qemu.')
+
+    parser.add_argument('-i', '--input',
+                        help='\t\tOVA file to be work on.',
+                        action='store', required=True, metavar='string')
+
+    args = parser.parse_args()
+
+    if (args.input.split('.')[-1] == 'ova') is False:
+        print('You must use a OVA file as input file.')
+        sys.exit(1)
+
+    banner()
+    checked = checkFile(args.input)
+    if checked is False:
+        sys.exit(1)
+"""
 # Imports.
 import subprocess
 import sys
@@ -129,3 +184,4 @@ def qai(args):
 
     print('Job done!')
 qai(args)
+"""

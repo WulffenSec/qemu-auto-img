@@ -1,7 +1,7 @@
-# QEMU AUTO IMG 
+# QEMU AUTO IMG
 
 ## What is it?
-> It's a script to automate the conversion of ova/vdi/vmdk files to qcow2. For using in kvm/qemu.
+> It's a script to automate the conversion of OVA files to qcow2. For using in QEMU.
 
 ## Whats required?
 
@@ -12,10 +12,12 @@
 ## How it work?
 
 #### In your terminal
-```
+
+```python
 git clone https://www.github.com/WulffenSec/qemu-auto-img.git
 cd qemu-auto-img
-python qai.py <file to convert>
+pip install -r requirements.txt
+python qai.py -i <file to convert>
 ```
 
-Giving the ova/vdi/vmdk file as an argument the script will convert it to qcow2.
+Providing a OVA file the script is going to automate the uncompression and rename of the files.
