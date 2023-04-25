@@ -34,6 +34,19 @@ def checkFile(file) -> bool:
         return True
 
 
+def checkSoftware() -> bool:
+    """
+    Checks if qemu-img is installed.
+    """
+    cmd = subprocess.call(['which', 'qemu-img'],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL)
+    if cmd == 0:
+        return True
+    else:
+        return False
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             prog='qai.py', usage='qai.py -i ova-file.ova',
@@ -53,6 +66,11 @@ if __name__ == '__main__':
     checked = checkFile(args.input)
     if checked is False:
         sys.exit(1)
+    ready = checkSoftware()
+    if ready is False:
+        print('Error finding "qemu-img", check your system if needs to be installed.') # noqa
+        sys.exit(1)
+
 """
 # Imports.
 import subprocess

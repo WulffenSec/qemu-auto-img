@@ -6,7 +6,6 @@
 ## Whats required?
 
 - python
-- tar
 - qemu-img
 
 ## How it work?
