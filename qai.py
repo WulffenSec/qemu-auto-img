@@ -1,5 +1,4 @@
 #!/bin/env python3
-import colorama
 import argparse
 import sys
 import subprocess
@@ -9,8 +8,8 @@ def banner() -> None:
     """
     Prints the banner
     """
-    green = colorama.Fore.GREEN
-    reset = colorama.Fore.RESET
+    green = '\033[32m'
+    reset = '\033[37m'
     banner = f'''
     {green} ██████  ███████ ███    ███ ██    ██{reset}        █████  ██    ██ ████████  ██████       {green} ██ ███    ███  ██████{reset}
     {green}██    ██ ██      ████  ████ ██    ██{reset}       ██   ██ ██    ██    ██    ██    ██      {green} ██ ████  ████ ██{reset}
@@ -27,11 +26,13 @@ def checkFile(file) -> bool:
     Checks if the OVA file actually is a OVA file
     """
     cmd = subprocess.check_output(['file', file]).decode().split('\n')[0]
-    if cmd != file + ': POSIX tar archive':
-        print('No valid OVA File. Type of file readed:', cmd.split(': ')[1])
-        return False
-    else:
+    ova = file + ': POSIX tar archive'
+    vmdk = file + ': VMware4 disk image'
+    if cmd == ova or cmd == vmdk:
         return True
+    else:
+        print('No valid file. Type of file readed:', cmd.split(': ')[1])
+        return False
 
 
 def checkSoftware() -> bool:
@@ -47,28 +48,120 @@ def checkSoftware() -> bool:
         return False
 
 
+def unGzip(file) -> bool:
+    """
+    Unzip GZ files.
+    """
+    cmd = subprocess.call(['gzip', '-d', file],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL)
+    if cmd == 0:
+        return True
+    else:
+        return False
+
+
+def unTar(file) -> list:
+    """
+    Untar OVA files.
+    """
+    cmd = subprocess.check_output(['tar', 'xvf', file]).decode()
+    return cmd.split('\n')
+
+
+def qemuImg(files) -> bool:
+    """
+    Converts the file into qcow2.
+    """
+    for file in files:
+        if file.split('.')[-1] == 'vmdk':
+            output = file.split('.vmdk')[0] + '.qcow2'
+        elif file.split('.')[-1] == 'vdi':
+            output = file.split('.vdi')[0] + '.qcow2'
+        cmd = subprocess.call(['qemu-img', 'convert', '-O', 'qcow2',
+                               file, output], stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL)
+    if cmd == 0:
+        return True
+    else:
+        return False
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             prog='qai.py', usage='qai.py -i ova-file.ova',
-            description='\t\tExtract and rename OVA files to qcow2 for qemu.')
+            description='\t\tExtract and rename and convert OVA/VMDK/VDI files to qcow2 for qemu.') # noqa
 
     parser.add_argument('-i', '--input',
-                        help='\t\tOVA file to be work on.',
+                        help='\t\tOVA/VMDK/VDI file to be work on.',
                         action='store', required=True, metavar='string')
 
     args = parser.parse_args()
-
-    if (args.input.split('.')[-1] == 'ova') is False:
-        print('You must use a OVA file as input file.')
-        sys.exit(1)
+    file = args.input
 
     banner()
-    checked = checkFile(args.input)
+
+    gz = (file.split('.')[-1] == 'gz')
+    if gz is True:
+        print('Gzip compress file detected, uncompressing...')
+        unZip = unGzip(file)
+        if unZip is False:
+            print('Error uncompressing gz file.')
+            sys.exit(1)
+        ova = (file.split('.')[-2] == 'ova')
+        vmdk = (file.split('.')[-2] == 'vmdk')
+        vdi = (file.split('.')[-2] == 'vdi')
+        file = file.split('.gz')[0]
+    else:
+        ova = (file.split('.')[-1] == 'ova')
+        vmdk = (file.split('.')[-1] == 'vmdk')
+        vdi = (file.split('.')[-1] == 'vdi')
+
+    if ova is True or vmdk is True or vdi is True:
+        pass
+    else:
+        print('You must use a OVA/VMDK/VDI file as input file.')
+        sys.exit(1)
+
+    checked = checkFile(file)
     if checked is False:
         sys.exit(1)
+
     ready = checkSoftware()
     if ready is False:
         print('Error finding "qemu-img", check your system if needs to be installed.') # noqa
+        sys.exit(1)
+    files: list = []
+    if ova is True:
+        print('Uncompressing OVA file...')
+        unTared = unTar(file)
+        for tar in unTared:
+            if tar != '':
+                if tar.split('.')[-1] == 'gz':
+                    print('Gzip compress file detected, uncompressing...')
+                    unZip = unGzip(tar)
+                    if unZip is False:
+                        print('Error uncompressing gz file.')
+                        sys.exit(1)
+                    vmdk = (tar.split('.')[-2] == 'vmdk')
+                    vdi = (tar.split('.')[-2] == 'vdi')
+                    files.append(tar.split('.gz')[0])
+                else:
+                    vmdk = (tar.split('.')[-1] == 'vmdk')
+                    vdi = (tar.split('.')[-1] == 'vdi')
+                    if tar.split('.')[-1] == 'vmdk' or\
+                            tar.split('.')[-1] == 'vdi':
+                        files.append(tar)
+    else:
+        files.append(file)
+
+    print('Converting file/files into qcow2')
+    converted = qemuImg(files)
+    if converted is True:
+        print('Convertion done.')
+        sys.exit(0)
+    else:
+        print('Fail to convert file/files.')
         sys.exit(1)
 
 """
@@ -119,7 +212,7 @@ def qai(args):
         else:
             print(help_menu)
             quit()
-    
+
     # Checks for a file.
     if disk_format == None:
         print(help_menu)
@@ -132,7 +225,7 @@ def qai(args):
         print('qemu-img not found. Install it and come back.')
     else:
         print('Found!')
-    
+
     # OVA work, extract find the disk file and set variable.
     if disk_format == 'ova':
         try:
